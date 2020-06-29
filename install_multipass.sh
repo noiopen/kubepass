@@ -1,12 +1,12 @@
 #!/bin/bash
+set -x
 
 CMD="${1:-help}"
 NUM="${2:-2}"
-MEM="${3:-2}"
+MEM="${3:-4}"
 DISK="${4:-15}"
 VCPU="${5:-1}"
 
-YAML="$(dirname $0)/conf/kubepass.yaml"
 MULTIPASS=multipass
 
 if ! "$MULTIPASS" -h >/dev/null 
@@ -25,11 +25,17 @@ build() {
    done
    "$MULTIPASS" exec kube-master -- sudo snap install microk8s --classic
    "$MULTIPASS" exec kube-master -- sudo /snap/bin/microk8s.start
-   "$MULTIPASS" exec kube-master -- /snap/bin/microk8s.enable dns storage knative
+   "$MULTIPASS" exec kube-master -- sudo usermod -a -G microk8s ubuntu
+   "$MULTIPASS" exec kube-master -- sudo chown -f -R ubuntu ~/.kube
    for (( I=1 ; I<= $COUNT; I++))
       do "$MULTIPASS" exec "kube-node-$I" -- sudo snap install microk8s --classic
          "$MULTIPASS" exec "kube-node-$I" -- sudo usermod -a -G microk8s ubuntu
          "$MULTIPASS" exec "kube-node-$I" -- sudo chown -f -R ubuntu ~/.kube
+         JOIN=$("$MULTIPASS" exec kube-master -- /snap/bin/microk8s.add-node | tail -n2 | head -n1)
+         JOIN=$(echo $JOIN | sed 's/ *$//g')
+	 "$MULTIPASS" exec "kube-node-$I" -- /snap/bin/$JOIN
+      done
+   "$MULTIPASS" exec kube-master -- /snap/bin/microk8s.enable dns storage knative
    echo "Ready!"
 }
 
@@ -38,8 +44,8 @@ destroy() {
    echo "Deleting kube-master"
    "$MULTIPASS" -v delete kube-master
    for (( I=1 ; I<= $COUNT; I++))
-   do  echo "Deleting kube-worker$I"
-       "$MULTIPASS" delete "kube-node$I"
+   do  echo "Deleting kube-node-$I"
+       "$MULTIPASS" delete "kube-node-$I"
    done
    "$MULTIPASS" -v purge
 }
@@ -61,7 +67,7 @@ config() {
          mv ~/.kube/config "$old"
          echo "Renamed ~/.kube/config to $old"
      fi
-    "$MULTIPASS" exec kube-master -- sudo cat /etc/kubernetes/admin.conf >~/.kube/config
+    "$MULTIPASS" exec kube-master -- /snap/bin/microk8s.config >~/.kube/config
     if ! kubectl get nodes
     then echo "please install kubectl"
     fi
@@ -87,6 +93,6 @@ case "$CMD" in
  *)
     echo "usage: (create|config|destroy) [#workers] [mem] [disk] [#vcpu]"
     echo "mem and disk are in giga, workers and vcpu a count"
-    echo "defaults: 2 workers with 1 vcpu with 2G mem 15G disk"
+    echo "defaults: 2 workers with 1 vcpu with 4G mem 15G disk"
   ;;
 esac
