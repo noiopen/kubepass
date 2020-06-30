@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -x
 
 CMD="${1:-help}"
 NUM="${2:-2}"
@@ -21,23 +21,28 @@ build() {
 	ARGS_MASTER="$2"
 	ARGS_WORKERS="$3"
 	"$MULTIPASS" launch -n kube-master $ARGS_MASTER
+
 	for (( I=1 ; I<= $COUNT; I++))
 	do
 		"$MULTIPASS" launch -n "kube-node-$I" $ARGS_WORKERS
 	done
+
 	"$MULTIPASS" exec kube-master -- sudo snap install microk8s --classic
 	"$MULTIPASS" exec kube-master -- sudo /snap/bin/microk8s.start
 	"$MULTIPASS" exec kube-master -- sudo usermod -a -G microk8s ubuntu
-	"$MULTIPASS" exec kube-master -- sudo chown -f -R ubuntu ~/.kube
+	"$MULTIPASS" exec kube-master -- sudo chown -f -R ubuntu /home/ubuntu/.kube
 	for (( I=1 ; I<= $COUNT; I++))
-    do
+	do
 		"$MULTIPASS" exec "kube-node-$I" -- sudo snap install microk8s --classic
-        "$MULTIPASS" exec "kube-node-$I" -- sudo usermod -a -G microk8s ubuntu
-        "$MULTIPASS" exec "kube-node-$I" -- sudo chown -f -R ubuntu ~/.kube
-        JOIN=$("$MULTIPASS" exec kube-master -- /snap/bin/microk8s.add-node | tail -n2 | head -n1 | xargs)
+        	"$MULTIPASS" exec "kube-node-$I" -- sudo usermod -a -G microk8s ubuntu
+        	"$MULTIPASS" exec "kube-node-$I" -- mkdir -p /home/ubuntu/.kube
+        	"$MULTIPASS" exec "kube-node-$I" -- sudo chown -f -R ubuntu /home/ubuntu/.kube
+        	JOIN=$("$MULTIPASS" exec kube-master -- /snap/bin/microk8s.add-node | tail -n2 | head -n1 | xargs)
 		"$MULTIPASS" exec "kube-node-$I" -- /snap/bin/$JOIN
 	done
+	
 	"$MULTIPASS" exec kube-master -- /snap/bin/microk8s.enable dns storage knative
+	
 	echo "Ready!"
 }
 
@@ -48,18 +53,21 @@ destroy() {
 	for (( I=1 ; I<= $COUNT; I++))
 	do
 		echo "Deleting kube-node-$I"
-    	"$MULTIPASS" delete "kube-node-$I"
+    		"$MULTIPASS" delete "kube-node-$I"
 	done
+
 	"$MULTIPASS" -v purge
 }
 
 are_you_sure() {
 	read -p "Are you sure? " -n 1 -r
 	echo ""
+
 	if [[ $REPLY =~ ^[Yy]$ ]]
 	then
 		return
 	fi
+
 	echo "Aborting..."
 	exit 1
 }
@@ -68,8 +76,8 @@ config() {
 	if test -f ~/.kube/config
 	then
 		old=~/.kube/config.$(date +"%s")
-        mv ~/.kube/config "$old"
-        echo "Renamed ~/.kube/config to $old"
+		mv ~/.kube/config "$old"
+		echo "Renamed ~/.kube/config to $old"
 	fi
 	"$MULTIPASS" exec kube-master -- /snap/bin/microk8s.config >~/.kube/config
 	if ! kubectl get nodes
