@@ -20,5 +20,5 @@ wsk property set --apihost $INVOKER_IP:31001
 wsk property set --auth 23bc46b1-71f6-4ed5-8c54-816aa4f8c502:123zO3xZCLrMN6v2BKK1dXYFpXlPkccOFqm12CdAsMgRU4VrNZ9lyGVCGuMDGIwP
 
 echo "Ready!"
-echo "Use wsk -i to access you openwhisk deployment"
+echo "Use wsk -i to access your openwhisk deployment"
 

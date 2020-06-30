@@ -101,7 +101,7 @@ config)
 	config
 ;;
 nodes)
-	"$MULTIPASS" exec kube-master -- sudo kubectl get nodes
+	"$MULTIPASS" exec kube-master -- /snap/bin/microk8s.kubectl get nodes
 ;;
 *)
 	echo "usage: (create|config|destroy) [#workers] [mem] [disk] [#vcpu]"
