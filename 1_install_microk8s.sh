@@ -7,7 +7,7 @@ MEM="${3:-4}"
 DISK="${4:-15}"
 VCPU="${5:-2}"
 
-MULTIPASS=multipass
+MULTIPASS=/snap/bin/multipass
 
 if ! "$MULTIPASS" -h >/dev/null
 then
@@ -79,6 +79,7 @@ config() {
 		mv ~/.kube/config "$old"
 		echo "Renamed ~/.kube/config to $old"
 	fi
+	mkdir -p ~/.kube/
 	"$MULTIPASS" exec kube-master -- /snap/bin/microk8s.config >~/.kube/config
 	if ! kubectl get nodes
 	then
