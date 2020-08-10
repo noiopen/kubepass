@@ -7,7 +7,7 @@ MEM="${3:-4}"
 DISK="${4:-15}"
 VCPU="${5:-2}"
 
-MULTIPASS=/snap/bin/multipass
+MULTIPASS=multipass
 
 if ! "$MULTIPASS" -h >/dev/null
 then
